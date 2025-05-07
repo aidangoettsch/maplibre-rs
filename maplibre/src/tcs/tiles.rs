@@ -6,11 +6,15 @@ use std::{
 };
 
 use downcast_rs::{impl_downcast, Downcast};
-
+use geozero::{FeatureProcessor, GeomProcessor};
 use crate::{
     coords::{Quadkey, WorldTileCoords},
     io::geometry_index::GeometryIndex,
 };
+use crate::coords::{ZoomLevel, EXTENT};
+use crate::tessellation::IndexDataType;
+use crate::tessellation::zero_tessellator::ZeroTessellator;
+use crate::vector::{AvailableVectorLayerData, VectorBufferPool, VectorLayerData, VectorLayersDataComponent};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Tile {
@@ -22,11 +26,11 @@ pub struct Tile {
 pub trait TileComponent: Downcast + 'static {}
 impl_downcast!(TileComponent);
 
-#[derive(Default)]
 pub struct Tiles {
     pub tiles: BTreeMap<Quadkey, Tile>,
     pub components: BTreeMap<Quadkey, Vec<UnsafeCell<Box<dyn TileComponent>>>>,
     pub geometry_index: GeometryIndex,
+    pub background_tile: AvailableVectorLayerData,
 }
 
 impl Tiles {
@@ -72,6 +76,72 @@ impl Tiles {
     pub fn clear(&mut self) {
         self.tiles.clear();
         self.components.clear();
+    }
+
+    pub fn find_layer(
+        &mut self,
+        coords: WorldTileCoords,
+        layer_name: &Option<String>,
+        buffer_pool: &VectorBufferPool
+    ) -> Option<&AvailableVectorLayerData> {
+        let loaded_layers = buffer_pool
+            .get_loaded_source_layers_at(coords)
+            .unwrap_or_default();
+
+        if let Some(source_layer) = layer_name.as_ref() {
+            let Some(vector_layers) = self.query_mut::<&VectorLayersDataComponent>(coords) else {
+                return None
+            };
+
+            let available_layers = vector_layers
+                .layers
+                .iter()
+                .flat_map(|data| match data {
+                    VectorLayerData::Available(data) => Some(data),
+                    VectorLayerData::Missing(_) => None,
+                })
+                .filter(|data| !loaded_layers.contains(&Some(data.source_layer.clone())))
+                .collect::<Vec<_>>();
+
+            available_layers
+                .iter()
+                .find(|layer| source_layer.as_str() == layer.source_layer)
+                .map(|data| *data)
+        } else if !loaded_layers.contains(&None) {
+            Some(&self.background_tile)
+        } else {
+            None
+        }
+    }
+}
+
+impl Default for Tiles {
+    fn default() -> Self {
+        let mut tessellator = ZeroTessellator::<IndexDataType>::default();
+        tessellator.dataset_begin(Some("background")).unwrap();
+        tessellator.feature_begin(1).unwrap();
+        tessellator.geometry_begin().unwrap();
+        tessellator.polygon_begin(true, 4, 1).unwrap();
+        tessellator.xy(0.0, 0.0, 1).unwrap();
+        tessellator.xy(0.0, EXTENT, 1).unwrap();
+        tessellator.xy(EXTENT, EXTENT, 1).unwrap();
+        tessellator.xy(EXTENT, 0.0, 1).unwrap();
+        tessellator.polygon_end(true, 1).unwrap();
+        tessellator.geometry_end().unwrap();
+        tessellator.feature_end(1).unwrap();
+        tessellator.dataset_end().unwrap();
+
+        Self {
+            tiles: Default::default(),
+            components: Default::default(),
+            geometry_index: Default::default(),
+            background_tile: AvailableVectorLayerData {
+                coords: (0, 0, ZoomLevel::new(0)).into(),
+                source_layer: "".to_string(),
+                feature_indices: tessellator.feature_indices,
+                buffer: tessellator.buffer.into()
+            },
+        }
     }
 }
 

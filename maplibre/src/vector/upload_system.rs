@@ -1,7 +1,6 @@
 //! Uploads data to the GPU which is needed for rendering.
 
 use std::iter;
-
 use crate::{
     context::MapContext,
     coords::ViewRegion,
@@ -14,7 +13,7 @@ use crate::{
     style::Style,
     tcs::tiles::Tiles,
     vector::{
-        AvailableVectorLayerData, VectorBufferPool, VectorLayerData, VectorLayersDataComponent,
+        AvailableVectorLayerData, VectorBufferPool,
     },
 };
 
@@ -131,59 +130,37 @@ fn upload_tesselated_layer(
 ) {
     // Upload all tessellated layers which are in view
     for coords in view_region.iter() {
-        let Some(vector_layers) = tiles.query_mut::<&VectorLayersDataComponent>(coords) else {
-            continue;
-        };
-
-        let loaded_layers = buffer_pool
-            .get_loaded_source_layers_at(coords)
-            .unwrap_or_default();
-
-        let available_layers = vector_layers
-            .layers
-            .iter()
-            .flat_map(|data| match data {
-                VectorLayerData::Available(data) => Some(data),
-                VectorLayerData::Missing(_) => None,
-            })
-            .filter(|data| !loaded_layers.contains(data.source_layer.as_str()))
-            .collect::<Vec<_>>();
-
         for style_layer in &style.layers {
-            let source_layer = style_layer.source_layer.as_ref().unwrap(); // TODO: Unwrap
+            let layer_data = tiles.find_layer(coords, &style_layer.source_layer, buffer_pool);
 
             let Some(AvailableVectorLayerData {
-                coords,
-                feature_indices,
-                buffer,
-                ..
-            }) = available_layers
-                .iter()
-                .find(|layer| source_layer.as_str() == layer.source_layer)
-            else {
-                continue;
+                         buffer,
+                         feature_indices,
+                         ..
+                     }) = layer_data else {
+                continue
             };
 
             let color: Option<Vec4f32> = style_layer
                 .paint
                 .as_ref()
-                .and_then(|paint| paint.get_color())
+                .and_then(|paint| paint.get_color(coords.z))
                 .map(|color| color.into());
 
-            let feature_metadata = (0..feature_indices.len()) // FIXME: Iterate over actual features
-                .enumerate()
-                .flat_map(|(i, _feature)| {
+            let feature_metadata = feature_indices
+                .iter()
+                .flat_map(|i| {
                     iter::repeat(ShaderFeatureStyle {
                         color: color.unwrap(),
                     })
-                    .take(feature_indices[i] as usize)
+                    .take(*i as usize)
                 })
                 .collect::<Vec<_>>();
 
             log::debug!("Allocating geometry at {coords}");
             buffer_pool.allocate_layer_geometry(
                 queue,
-                *coords,
+                coords,
                 style_layer.clone(),
                 buffer,
                 ShaderLayerMetadata::new(style_layer.index as f32),
