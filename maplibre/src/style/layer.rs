@@ -64,7 +64,7 @@ impl LayerPaint {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StyleLayer {
     #[serde(skip)]
-    pub index: u32, // FIXME: How is this initialized?
+    pub index: u32,
     pub id: String,
     // TODO filter
     // TODO layout

@@ -3,13 +3,27 @@
 use std::{collections::HashMap, str::FromStr};
 
 use csscolorparser::Color;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::style::{
     layer::{FillPaint, LayerPaint, LinePaint, StyleLayer},
     raster::RasterLayer,
     source::Source,
 };
+
+fn deserialize_style_layers<'de, D>(de: D) -> Result<Vec<StyleLayer>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw: Vec<StyleLayer> = Vec::deserialize(de)?;
+    
+    Ok(raw.iter().enumerate().map(|(i, layer)| {
+        StyleLayer {
+            index: i as u32,
+            ..layer.clone()
+        }
+    }).collect())
+}
 
 /// Stores the style for a multi-layered map.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -18,6 +32,7 @@ pub struct Style {
     pub name: String,
     pub metadata: HashMap<String, String>,
     pub sources: HashMap<String, Source>,
+    #[serde(deserialize_with = "deserialize_style_layers")]
     pub layers: Vec<StyleLayer>,
     pub center: Option<[f64; 2]>, // TODO: Use LatLon type here
     pub zoom: Option<f64>,
