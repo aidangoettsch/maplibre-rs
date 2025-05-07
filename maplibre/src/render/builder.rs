@@ -107,7 +107,7 @@ impl UninitializedRenderer {
 
 #[cfg(feature = "headless")]
 impl UninitializedRenderer {
-    pub(crate) async fn initialize_headless<MWC>(
+    pub async fn initialize_headless<MWC>(
         self,
         existing_window: &MWC::MapWindow,
     ) -> Result<Renderer, RenderError>

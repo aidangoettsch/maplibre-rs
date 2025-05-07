@@ -13,13 +13,14 @@ use crate::{
     platform::{http_client::ReqwestHttpClient, scheduler::TokioScheduler},
     plugin::Plugin,
     render::{
-        builder::RendererBuilder, graph::RenderGraph, tile_view_pattern::ViewTileSources,
+        builder::RendererBuilder, graph::RenderGraph,
         RenderStageLabel, Renderer,
     },
     schedule::Schedule,
     tcs::{system::SystemContainer, world::World},
     window::{MapWindowConfig, PhysicalSize},
 };
+use crate::environment::Environment;
 
 mod graph_node;
 mod system;
@@ -81,11 +82,11 @@ impl HeadlessPlugin {
     }
 }
 
-impl Plugin<HeadlessEnvironment> for HeadlessPlugin {
+impl<E: Environment> Plugin<E> for HeadlessPlugin {
     fn build(
         &self,
         schedule: &mut Schedule,
-        _kernel: Rc<Kernel<HeadlessEnvironment>>,
+        _kernel: Rc<Kernel<E>>,
         world: &mut World,
         graph: &mut RenderGraph,
     ) {
@@ -105,7 +106,7 @@ impl Plugin<HeadlessEnvironment> for HeadlessPlugin {
         );
 
         // FIXME tcs: Is this good style?
-        schedule.remove_stage(RenderStageLabel::Extract);
-        resources.get_mut::<ViewTileSources>().unwrap().clear();
+        // schedule.remove_stage(RenderStageLabel::Extract);
+        // resources.get_mut::<ViewTileSources>().unwrap().clear();
     }
 }

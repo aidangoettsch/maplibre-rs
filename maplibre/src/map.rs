@@ -21,6 +21,8 @@ use crate::{
     tcs::world::World,
     window::{HeadedMapWindow, MapWindow, MapWindowConfig, WindowCreateError},
 };
+use crate::render::RenderStageLabel;
+use crate::tcs::system::stage::SystemStage;
 
 #[derive(Error, Debug)]
 pub enum MapError {
@@ -54,10 +56,7 @@ pub struct Map<E: Environment> {
     plugins: Vec<Box<dyn Plugin<E>>>,
 }
 
-impl<E: Environment> Map<E>
-where
-    <<E as Environment>::MapWindowConfig as MapWindowConfig>::MapWindow: HeadedMapWindow,
-{
+impl<E: Environment> Map<E> {
     pub fn new(
         style: Style,
         kernel: Kernel<E>,
@@ -82,68 +81,20 @@ where
         };
         Ok(map)
     }
-
-    pub async fn initialize_renderer(&mut self) -> Result<(), MapError> {
-        match &mut self.map_context {
-            CurrentMapContext::Ready(_) => Err(MapError::RendererAlreadySet),
-            CurrentMapContext::Pending {
-                style,
-                renderer_builder,
-            } => {
-                let init_result = renderer_builder
-                    .clone() // Cloning because we want to be able to build multiple times maybe
-                    .build()
-                    .initialize_renderer::<E::MapWindowConfig>(&self.window)
-                    .await
-                    .map_err(MapError::DeviceInit)?;
-
-                let window_size = self.window.size();
-
-                let center = style.center.unwrap_or_default();
-                let initial_zoom = style.zoom.map(Zoom::new).unwrap_or_default();
-                let view_state = ViewState::new(
-                    window_size,
-                    WorldCoords::from_lat_lon(LatLon::new(center[0], center[1]), initial_zoom),
-                    initial_zoom,
-                    cgmath::Deg::<f64>(style.pitch.unwrap_or_default()),
-                    cgmath::Rad(0.6435011087932844),
-                );
-
-                let mut world = World::default();
-
-                match init_result {
-                    InitializationResult::Initialized(InitializedRenderer {
-                        mut renderer, ..
-                    }) => {
-                        for plugin in &self.plugins {
-                            plugin.build(
-                                &mut self.schedule,
-                                self.kernel.clone(),
-                                &mut world,
-                                &mut renderer.render_graph,
-                            );
-                        }
-
-                        self.map_context = CurrentMapContext::Ready(MapContext {
-                            world,
-                            view_state,
-                            style: std::mem::take(style),
-                            renderer,
-                        });
-                    }
-                    InitializationResult::Uninitialized(UninitializedRenderer { .. }) => {}
-                    _ => panic!("Rendering context gone"),
-                };
-                Ok(())
-            }
-        }
-    }
-
+    
     pub fn window_mut(&mut self) -> &mut <E::MapWindowConfig as MapWindowConfig>::MapWindow {
         &mut self.window
     }
     pub fn window(&self) -> &<E::MapWindowConfig as MapWindowConfig>::MapWindow {
         &self.window
+    }
+
+    pub fn schedule(&self) -> &Schedule {
+        &self.schedule
+    }
+
+    pub fn schedule_mut(&mut self) -> &mut Schedule {
+        &mut self.schedule
     }
 
     pub fn is_initialized(&self) -> bool {
@@ -180,6 +131,19 @@ where
             CurrentMapContext::Pending { .. } => Err(MapError::RendererNotReady),
         }
     }
+    
+    pub fn run_schedule_stage(&mut self, stage_label: RenderStageLabel) -> Result<(), MapError> {
+        match &mut self.map_context {
+            CurrentMapContext::Ready(map_context) => {
+                self.schedule.stage::<SystemStage, _>(stage_label, |stage: &mut SystemStage| {
+                    stage.run(map_context);
+                    stage
+                });
+                Ok(())
+            }
+            CurrentMapContext::Pending { .. } => Err(MapError::RendererNotReady),
+        }
+    }
 
     pub fn context(&self) -> Result<&MapContext, MapError> {
         match &self.map_context {
@@ -197,5 +161,114 @@ where
 
     pub fn kernel(&self) -> &Rc<Kernel<E>> {
         &self.kernel
+    }
+    
+    pub async fn initialize_headless(&mut self) -> Result<(), MapError> {
+        match &mut self.map_context {
+            CurrentMapContext::Ready(_) => Err(MapError::RendererAlreadySet),
+            CurrentMapContext::Pending {
+                style,
+                renderer_builder,
+            } => {
+                let mut renderer = renderer_builder
+                    .clone() // Cloning because we want to be able to build multiple times maybe
+                    .build()
+                    .initialize_headless::<E::MapWindowConfig>(&self.window)
+                    .await
+                    .map_err(MapError::DeviceInit)?;
+
+                let window_size = self.window.size();
+
+                let center = style.center.unwrap_or_default();
+                let initial_zoom = style.zoom.map(Zoom::new).unwrap_or_default();
+                let view_state = ViewState::new(
+                    window_size,
+                    WorldCoords::from_lat_lon(LatLon::new(center[0], center[1]), initial_zoom),
+                    initial_zoom,
+                    cgmath::Deg::<f64>(style.pitch.unwrap_or_default()),
+                    cgmath::Rad(0.6435011087932844),
+                );
+
+                let mut world = World::default();
+                for plugin in &self.plugins {
+                    plugin.build(
+                        &mut self.schedule,
+                        self.kernel.clone(),
+                        &mut world,
+                        &mut renderer.render_graph,
+                    );
+                }
+
+                self.map_context = CurrentMapContext::Ready(MapContext {
+                    world,
+                    view_state,
+                    style: std::mem::take(style),
+                    renderer,
+                });
+                
+                Ok(())
+            }
+        }
+    }
+}
+
+impl<E: Environment> Map<E>
+where
+    <<E as Environment>::MapWindowConfig as MapWindowConfig>::MapWindow: HeadedMapWindow,
+{
+    pub async fn initialize_renderer(&mut self) -> Result<(), MapError> {
+        match &mut self.map_context {
+            CurrentMapContext::Ready(_) => Err(MapError::RendererAlreadySet),
+            CurrentMapContext::Pending {
+                style,
+                renderer_builder,
+            } => {
+                let init_result = renderer_builder
+                    .clone() // Cloning because we want to be able to build multiple times maybe
+                    .build()
+                    .initialize_renderer::<E::MapWindowConfig>(&self.window)
+                    .await
+                    .map_err(MapError::DeviceInit)?;
+
+                let window_size = self.window.size();
+
+                let center = style.center.unwrap_or_default();
+                let initial_zoom = style.zoom.map(Zoom::new).unwrap_or_default();
+                let view_state = ViewState::new(
+                    window_size,
+                    WorldCoords::from_lat_lon(LatLon::new(center[0], center[1]), initial_zoom),
+                    initial_zoom,
+                    cgmath::Deg::<f64>(style.pitch.unwrap_or_default()),
+                    cgmath::Rad(0.6435011087932844),
+                );
+
+                let mut world = World::default();
+
+                match init_result {
+                    InitializationResult::Initialized(InitializedRenderer {
+                                                          mut renderer, ..
+                                                      }) => {
+                        for plugin in &self.plugins {
+                            plugin.build(
+                                &mut self.schedule,
+                                self.kernel.clone(),
+                                &mut world,
+                                &mut renderer.render_graph,
+                            );
+                        }
+
+                        self.map_context = CurrentMapContext::Ready(MapContext {
+                            world,
+                            view_state,
+                            style: std::mem::take(style),
+                            renderer,
+                        });
+                    }
+                    InitializationResult::Uninitialized(UninitializedRenderer { .. }) => {}
+                    _ => panic!("Rendering context gone"),
+                };
+                Ok(())
+            }
+        }
     }
 }
