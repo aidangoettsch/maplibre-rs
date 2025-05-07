@@ -25,10 +25,11 @@ fn main(
     @location(8) color: vec4<f32>,
     @location(9) zoom_factor: f32,
     @location(10) z_index: f32,
+    @location(11) width_in: f32,
     @builtin(instance_index) instance_idx: u32 // instance_index is used when we have multiple instances of the same "object"
 ) -> VertexOutput {
     let z = -z_index;
-    let width = 3.0 * zoom_factor;
+    let width = width_in * zoom_factor;
 
     // The following code moves all "invisible" vertices to (0, 0, 0)
     //if (color.w == 0.0) {

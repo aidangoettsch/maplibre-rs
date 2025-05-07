@@ -152,6 +152,7 @@ fn upload_tesselated_layer(
                 .flat_map(|i| {
                     iter::repeat(ShaderFeatureStyle {
                         color: color.unwrap(),
+                        width: 3.0
                     })
                     .take(*i as usize)
                 })

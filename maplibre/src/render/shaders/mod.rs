@@ -179,6 +179,11 @@ impl Shader for VectorTileShader {
                             format: wgpu::VertexFormat::Float32x4,
                             shader_location: 8,
                         },
+                        wgpu::VertexAttribute {
+                            offset: wgpu::VertexFormat::Float32x4.size(),
+                            format: wgpu::VertexFormat::Float32,
+                            shader_location: 11,
+                        },
                     ],
                 },
             ],
@@ -238,7 +243,7 @@ impl ShaderGlobals {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct ShaderVertex {
     pub position: Vec2f32,
     pub normal: Vec2f32,
@@ -260,6 +265,7 @@ impl Default for ShaderVertex {
 #[derive(Debug, Copy, Clone, Pod, Zeroable)]
 pub struct ShaderFeatureStyle {
     pub color: Vec4f32,
+    pub width: f32,
 }
 
 #[repr(C)]
