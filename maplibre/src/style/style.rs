@@ -98,6 +98,7 @@ impl Default for Style {
                     paint: Some(LayerPaint::Line(LinePaint {
                         line_color: Some(Color::from_str("#ffffff").unwrap()),
                         line_opacity: None,
+                        line_width: None,
                     })),
                     source: None,
                     source_layer: Some("transportation".to_string()),
@@ -150,6 +151,7 @@ impl Default for Style {
                     paint: Some(LayerPaint::Line(LinePaint {
                         line_color: Some(Color::from_str("black").unwrap()),
                         line_opacity: None,
+                        line_width: None,
                     })),
                     source: None,
                     source_layer: Some("boundary".to_string()),

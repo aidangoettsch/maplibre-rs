@@ -1,12 +1,12 @@
 //! Vector tile layer drawing utilities.
 
 use std::collections::HashMap;
-use cgmath::num_traits::pow;
 use cint::{Alpha, EncodedSrgb};
 use csscolorparser::Color;
 use serde::{Deserialize, Serialize};
 use crate::coords::ZoomLevel;
 use crate::style::raster::RasterLayer;
+use crate::style::util::interpolate;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
@@ -48,6 +48,9 @@ pub struct LinePaint {
     #[serde(rename = "line-opacity")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line_opacity: Option<InterpolatedQuantity<f32>>,
+    #[serde(rename = "line-width")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line_width: Option<InterpolatedQuantity<f32>>,
     // TODO a lot
 }
 
@@ -72,47 +75,8 @@ fn cint_color_from_css_color_and_opacity(css_color: &Option<Color>, opacity: &Op
 
     color.map(|mut c| {
         if let Some(interpolant) = opacity {
-            match interpolant {
-                InterpolatedQuantity::Fixed(alpha) => {
-                    c.alpha = *alpha;
-                }
-                InterpolatedQuantity::Interpolated { base, stops } => { 
-                    if stops.is_empty() {
-                        return c
-                    }
-                    
-                    let (min_zoom, min_zoom_value) = stops.first().unwrap();
-                    let (max_zoom, max_zoom_value) = stops.last().unwrap();
-                    
-                    let window = stops
-                        .iter()
-                        .zip(stops.iter().skip(1))
-                        .find(|((stop_a, _), (stop_b, _))| *stop_a <= zoom_level && *stop_b >= zoom_level);
-                    
-                    let alpha = if let Some(((stop_a, stop_a_value), (stop_b, stop_b_value))) = window {
-                        let zoom_diff: ZoomLevel = *stop_b - (*stop_a).into();
-                        let zoom_prog: ZoomLevel = zoom_level - (*stop_a).into();
-
-                        let zoom_diff_u8: u8 = zoom_diff.into();
-                        let zoom_prog_u8: u8 = zoom_prog.into();
-                        
-                        let interp_factor = if zoom_diff == ZoomLevel::new(0) {
-                            0f32
-                        } else if *base == 1.0 {
-                            (zoom_diff_u8 as f32) / (zoom_prog_u8 as f32)
-                        } else {
-                            (pow(*base, zoom_prog_u8.into()) - 1.0) / (pow(*base, zoom_diff_u8.into()) - 1.0)
-                        };
-                        
-                        stop_a_value + (stop_b_value - stop_a_value) * interp_factor
-                    } else if zoom_level <= *min_zoom {
-                        *min_zoom_value
-                    } else {
-                        *max_zoom_value
-                    };
-                    
-                    c.alpha = alpha;
-                },
+            if let Some(alpha) = interpolate(interpolant, zoom_level) {
+                c.alpha = alpha;
             }
         }
         

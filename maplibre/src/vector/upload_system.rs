@@ -16,6 +16,8 @@ use crate::{
         AvailableVectorLayerData, VectorBufferPool,
     },
 };
+use crate::style::layer::{LayerPaint, LinePaint};
+use crate::style::util::interpolate;
 
 pub fn upload_system(
     MapContext {
@@ -147,18 +149,28 @@ fn upload_tesselated_layer(
                 .and_then(|paint| paint.get_color(coords.z))
                 .map(|color| color.into());
 
+            let width = style_layer
+                .paint
+                .as_ref()
+                .and_then(|paint| match paint {
+                    LayerPaint::Line(LinePaint { line_width, .. }) => line_width.as_ref(),
+                    _ => None
+                })
+                .and_then(|width_interpolant| interpolate(width_interpolant, coords.z))
+                .unwrap_or(0.0);
+
             let feature_metadata = feature_indices
                 .iter()
                 .flat_map(|i| {
                     iter::repeat(ShaderFeatureStyle {
                         color: color.unwrap(),
-                        width: 3.0
+                        width,
                     })
                     .take(*i as usize)
                 })
                 .collect::<Vec<_>>();
 
-            log::debug!("Allocating geometry at {coords}");
+            log::info!("Allocating geometry at {coords} for layer {} with width {width}", style_layer.id);
             buffer_pool.allocate_layer_geometry(
                 queue,
                 coords,

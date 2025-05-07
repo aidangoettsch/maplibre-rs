@@ -10,7 +10,9 @@ struct ShaderGlobals {
 @group(0) @binding(0) var<uniform> globals: ShaderGlobals;
 
 struct VertexOutput {
-    @location(0)  v_color: vec4<f32>,
+    @location(0) v_color: vec4<f32>,
+    @location(1) @interpolate(linear, center) v_normal: vec2<f32>,
+    @location(2) line_width: f32,
     @builtin(position) position: vec4<f32>,
 };
 
@@ -38,5 +40,5 @@ fn main(
 
     var final_position = mat4x4<f32>(translate1, translate2, translate3, translate4) * vec4<f32>(position + normal * width, z, 1.0);
 
-    return VertexOutput(color, final_position);
+    return VertexOutput(color, normal, width, final_position);
 }
