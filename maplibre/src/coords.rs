@@ -17,6 +17,7 @@ use crate::{
         SignificantlyDifferent,
     },
 };
+use crate::render::tile_view_pattern::MAX_ZOOM_LEVEL;
 
 pub const EXTENT_UINT: u32 = 4096;
 pub const EXTENT_SINT: i32 = EXTENT_UINT as i32;
@@ -259,7 +260,7 @@ impl Zoom {
     pub fn zoom_level(&self, tile_size: f64) -> ZoomLevel {
         // TODO: Also support round() instead of floor() here
         let z = (self.0 + (TILE_SIZE / tile_size).ln() / 2.0_f64.ln()).floor() as u8;
-        return ZoomLevel(z.max(0));
+        return ZoomLevel(z.max(0).min(MAX_ZOOM_LEVEL as u8));
     }
 }
 

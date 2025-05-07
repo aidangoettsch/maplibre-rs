@@ -21,6 +21,9 @@ pub type WgpuTileViewPattern = TileViewPattern<wgpu::Queue, wgpu::Buffer>;
 /// Vector tiles always have a size of 512.0.
 pub const DEFAULT_TILE_SIZE: f64 = 512.0;
 
+/// TODO(aidangoettsch): this is jank as hell
+pub const MAX_ZOOM_LEVEL: f64 = 14.0;
+
 /// This defines the source tile shaped from which the content for the `target` is taken.
 /// For example if the target is `(0, 0, 1)` (of [`ViewTile`]) , we might use
 /// `SourceShapes::Parent((0, 0, 0))` as source.

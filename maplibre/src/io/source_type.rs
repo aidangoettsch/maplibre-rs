@@ -1,17 +1,20 @@
 use crate::{coords::WorldTileCoords, style::source::TileAddressingScheme};
+use crate::coords::ZoomLevel;
 
 /// Represents a source from which the vector tile are fetched.
 #[derive(Clone)]
 pub struct TessellateSource {
     pub url: String,
     pub filetype: String,
+    pub max_zoom: ZoomLevel
 }
 
 impl TessellateSource {
-    pub fn new(url: &str, filetype: &str) -> Self {
+    pub fn new(url: &str, filetype: &str, max_zoom: ZoomLevel) -> Self {
         Self {
             url: url.to_string(),
             filetype: filetype.to_string(),
+            max_zoom,
         }
     }
 
@@ -30,7 +33,7 @@ impl TessellateSource {
 
 impl Default for TessellateSource {
     fn default() -> Self {
-        Self::new("https://maps.tuerantuer.org/europe_germany", "pbf")
+        Self::new("https://api.maptiler.com/tiles/v3-openmaptiles", "pbf?key=rzq14TmV1096yjvD3Uyw", ZoomLevel::new(14))
     }
 }
 
