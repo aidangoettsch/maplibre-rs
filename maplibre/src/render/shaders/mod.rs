@@ -81,7 +81,7 @@ impl Shader for TileMaskShader {
             entry_point: "main",
             targets: vec![Some(wgpu::ColorTargetState {
                 format: self.format,
-                blend: None,
+                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                 write_mask: if self.draw_colors {
                     wgpu::ColorWrites::ALL
                 } else {
@@ -196,7 +196,7 @@ impl Shader for VectorTileShader {
             entry_point: "main",
             targets: vec![Some(wgpu::ColorTargetState {
                 format: self.format,
-                blend: None,
+                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                 write_mask: wgpu::ColorWrites::ALL,
             })],
         }

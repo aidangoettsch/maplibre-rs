@@ -58,6 +58,7 @@ impl Default for Style {
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#c8facc").unwrap()),
+                        fill_opacity: None,
                     })),
                     source: None,
                     source_layer: Some("park".to_string()),
@@ -70,6 +71,7 @@ impl Default for Style {
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#e0dfdf").unwrap()),
+                        fill_opacity: None,
                     })),
                     source: None,
                     source_layer: Some("landuse".to_string()),
@@ -82,6 +84,7 @@ impl Default for Style {
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#aedfa3").unwrap()),
+                        fill_opacity: None,
                     })),
                     source: None,
                     source_layer: Some("landcover".to_string()),
@@ -94,6 +97,7 @@ impl Default for Style {
                     metadata: None,
                     paint: Some(LayerPaint::Line(LinePaint {
                         line_color: Some(Color::from_str("#ffffff").unwrap()),
+                        line_opacity: None,
                     })),
                     source: None,
                     source_layer: Some("transportation".to_string()),
@@ -106,6 +110,7 @@ impl Default for Style {
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#d9d0c9").unwrap()),
+                        fill_opacity: None,
                     })),
                     source: None,
                     source_layer: Some("building".to_string()),
@@ -118,6 +123,7 @@ impl Default for Style {
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#aad3df").unwrap()),
+                        fill_opacity: None,
                     })),
                     source: None,
                     source_layer: Some("water".to_string()),
@@ -129,6 +135,7 @@ impl Default for Style {
                     minzoom: None,
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
+                        fill_opacity: None,
                         fill_color: Some(Color::from_str("#aad3df").unwrap()),
                     })),
                     source: None,
@@ -142,6 +149,7 @@ impl Default for Style {
                     metadata: None,
                     paint: Some(LayerPaint::Line(LinePaint {
                         line_color: Some(Color::from_str("black").unwrap()),
+                        line_opacity: None,
                     })),
                     source: None,
                     source_layer: Some("boundary".to_string()),
