@@ -10,7 +10,7 @@ members = [
     "android",
     "apple",
     "web",
-    "benchmarks",
+    "benchmarks", "maplibre-style",
 ]
 
 [workspace.package]
