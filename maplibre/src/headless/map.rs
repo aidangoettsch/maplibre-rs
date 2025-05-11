@@ -88,9 +88,10 @@ impl HeadlessMap {
                     .map(|layer| {
                         VectorLayerData::Available(AvailableVectorLayerData {
                             coords: layer.coords,
-                            source_layer: layer.layer_data.name,
                             buffer: layer.buffer,
                             feature_indices: layer.feature_indices,
+                            // TODO(aidangoettsch): this is probably bad
+                            style_layer_id: layer.layer_data.name,
                         })
                     })
                     .collect::<Vec<_>>(),
@@ -141,6 +142,7 @@ impl HeadlessMap {
                     .iter()
                     .map(|layer| layer.to_string())
                     .collect(),
+                style: self.map_context.style.clone(),
             },
             &mut processor,
         )

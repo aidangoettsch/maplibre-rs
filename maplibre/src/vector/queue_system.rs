@@ -43,6 +43,7 @@ pub fn queue_system(MapContext { world, .. }: &mut MapContext) {
 
             if let Some(layer_entries) = buffer_pool_index.get_layers(source_shape.coords()) {
                 for layer_entry in layer_entries {
+                    log::info!("Queueing layer {} at {} with index {}", layer_entry.style_layer.id, layer_entry.coords, layer_entry.style_layer.index);
                     // Draw tile
                     layer_item_phase.add(LayerItem {
                         draw_function: Box::new(DrawState::<LayerItem, DrawVectorTiles>::new()),

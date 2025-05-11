@@ -33,12 +33,9 @@ fn main(
     let z = -z_index;
     let width = width_in * zoom_factor;
 
-    // The following code moves all "invisible" vertices to (0, 0, 0)
-    //if (color.w == 0.0) {
-    //   return VertexOutput(color, vec4<f32>(0.0, 0.0, 0.0, 1.0));
-    //}
-
-    var final_position = mat4x4<f32>(translate1, translate2, translate3, translate4) * vec4<f32>(position + normal * width, z, 1.0);
+    var screen_space_position = mat4x4<f32>(translate1, translate2, translate3, translate4) * vec4<f32>(position + normal * width, z, 1.0);
+    var screen_space_normal = mat4x4<f32>(translate1, translate2, translate3, translate4) * vec4<f32>(normal, 0.0, 0.0);
+    var final_position = screen_space_position + screen_space_normal * width;
 
     return VertexOutput(color, normal, width, final_position);
 }

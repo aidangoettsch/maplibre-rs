@@ -8,3 +8,4 @@ pub mod raster;
 pub mod source;
 mod style;
 pub mod util;
+pub mod expression;

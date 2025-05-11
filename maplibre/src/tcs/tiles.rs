@@ -81,14 +81,15 @@ impl Tiles {
     pub fn find_layer(
         &mut self,
         coords: WorldTileCoords,
-        layer_name: &Option<String>,
+        source_layer_name: &Option<String>,
+        style_layer_id: &str,
         buffer_pool: &VectorBufferPool
     ) -> Option<&AvailableVectorLayerData> {
         let loaded_layers = buffer_pool
-            .get_loaded_source_layers_at(coords)
+            .get_loaded_layers_at(coords)
             .unwrap_or_default();
 
-        if let Some(source_layer) = layer_name.as_ref() {
+        if source_layer_name.is_some() {
             let Some(vector_layers) = self.query_mut::<&VectorLayersDataComponent>(coords) else {
                 return None
             };
@@ -100,14 +101,15 @@ impl Tiles {
                     VectorLayerData::Available(data) => Some(data),
                     VectorLayerData::Missing(_) => None,
                 })
-                .filter(|data| !loaded_layers.contains(&Some(data.source_layer.clone())))
+                .filter(|data| !loaded_layers.contains(&data.style_layer_id))
                 .collect::<Vec<_>>();
 
             available_layers
                 .iter()
-                .find(|layer| source_layer.as_str() == layer.source_layer)
+                .find(|layer| style_layer_id == layer.style_layer_id)
                 .map(|data| *data)
-        } else if !loaded_layers.contains(&None) {
+        } else if !loaded_layers.contains(style_layer_id) {
+            self.background_tile.style_layer_id = style_layer_id.to_string();
             Some(&self.background_tile)
         } else {
             None
@@ -137,9 +139,9 @@ impl Default for Tiles {
             geometry_index: Default::default(),
             background_tile: AvailableVectorLayerData {
                 coords: (0, 0, ZoomLevel::new(0)).into(),
-                source_layer: "".to_string(),
                 feature_indices: tessellator.feature_indices,
-                buffer: tessellator.buffer.into()
+                buffer: tessellator.buffer.into(),
+                style_layer_id: "background".to_string(),
             },
         }
     }

@@ -53,6 +53,7 @@ impl RenderCommand<LayerItem> for DrawVectorTile {
             .iter()
             .find(|entry| entry.style_layer.id == item.style_layer)
         else {
+            log::error!("Rendering {} failed because the original entry couldn't be found", item.style_layer);
             return RenderCommandResult::Failure;
         };
 
@@ -61,16 +62,23 @@ impl RenderCommand<LayerItem> for DrawVectorTile {
         // Uses stencil value of requested tile and the shape of the requested tile
         let reference = source_shape.coords().stencil_reference_value_3d() as u32;
 
-        tracing::trace!(
-            "Drawing layer {:?} at {}",
-            entry.style_layer.source_layer,
-            entry.coords
+        let index_range = entry.indices_buffer_range();
+        let vertex_range = entry.vertices_buffer_range();
+        let layer_meta_range = entry.layer_metadata_buffer_range();
+        let feature_meta_range = entry.feature_metadata_buffer_range();
+        
+        log::info!(
+            "Drawing layer {:?} at {} with index len {} vertex len {} layer meta len {} feature meta len {}",
+            entry.style_layer.id,
+            entry.coords,
+            index_range.end - index_range.start,
+            vertex_range.end - vertex_range.start,
+            layer_meta_range.end - layer_meta_range.start,
+            feature_meta_range.end - feature_meta_range.start,
         );
 
-        let index_range = entry.indices_buffer_range();
-
         if index_range.is_empty() {
-            tracing::error!("Tried to draw a vector tile without any vertices");
+            log::error!("Tried to draw a vector tile without any vertices");
             return RenderCommandResult::Failure;
         }
 
@@ -101,6 +109,8 @@ impl RenderCommand<LayerItem> for DrawVectorTile {
                 .slice(entry.feature_metadata_buffer_range()),
         );
         pass.draw_indexed(entry.indices_range(), 0, 0..1);
+
+        log::info!("Drawing layer {} DONE", entry.style_layer.id);
 
         RenderCommandResult::Success
     }

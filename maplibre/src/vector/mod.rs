@@ -113,17 +113,18 @@ impl<E: Environment, T: VectorTransferables> Plugin<E> for VectorPlugin<T> {
     }
 }
 
+#[derive(Clone)]
 pub struct AvailableVectorLayerData {
     pub coords: WorldTileCoords,
-    pub source_layer: String,
     pub buffer: OverAlignedVertexBuffer<ShaderVertex, IndexDataType>,
     /// Holds for each feature the count of indices.
     pub feature_indices: Vec<u32>,
+    pub style_layer_id: String,
 }
 
 pub struct MissingVectorLayerData {
     pub coords: WorldTileCoords,
-    pub source_layer: String,
+    pub style_layer_id: String,
 }
 
 pub enum VectorLayerData {

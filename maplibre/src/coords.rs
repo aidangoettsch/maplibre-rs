@@ -134,6 +134,12 @@ impl From<ZoomLevel> for u8 {
     }
 }
 
+impl From<ZoomLevel> for f64 {
+    fn from(val: ZoomLevel) -> Self {
+        val.0 as f64
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct LatLon {
     pub latitude: f64,

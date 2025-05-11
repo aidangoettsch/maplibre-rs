@@ -16,8 +16,13 @@ where
     D: Deserializer<'de>,
 {
     let raw: Vec<StyleLayer> = Vec::deserialize(de)?;
+    log::info!("CALLED deserialize_style_layers");
     
     Ok(raw.iter().enumerate().map(|(i, layer)| {
+        log::info!("layer with index {}, {:?}", i, StyleLayer {
+            index: i as u32,
+            ..layer.clone()
+        });
         StyleLayer {
             index: i as u32,
             ..layer.clone()
@@ -55,6 +60,7 @@ impl Default for Style {
                     id: "park".to_string(),
                     maxzoom: None,
                     minzoom: None,
+                    filter: None,
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#c8facc").unwrap()),
@@ -68,6 +74,7 @@ impl Default for Style {
                     id: "landuse".to_string(),
                     maxzoom: None,
                     minzoom: None,
+                    filter: None,
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#e0dfdf").unwrap()),
@@ -81,6 +88,7 @@ impl Default for Style {
                     id: "landcover".to_string(),
                     maxzoom: None,
                     minzoom: None,
+                    filter: None,
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#aedfa3").unwrap()),
@@ -94,6 +102,7 @@ impl Default for Style {
                     id: "transportation".to_string(),
                     maxzoom: None,
                     minzoom: None,
+                    filter: None,
                     metadata: None,
                     paint: Some(LayerPaint::Line(LinePaint {
                         line_color: Some(Color::from_str("#ffffff").unwrap()),
@@ -108,6 +117,7 @@ impl Default for Style {
                     id: "building".to_string(),
                     maxzoom: None,
                     minzoom: None,
+                    filter: None,
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#d9d0c9").unwrap()),
@@ -121,6 +131,7 @@ impl Default for Style {
                     id: "water".to_string(),
                     maxzoom: None,
                     minzoom: None,
+                    filter: None,
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_color: Some(Color::from_str("#aad3df").unwrap()),
@@ -134,6 +145,7 @@ impl Default for Style {
                     id: "waterway".to_string(),
                     maxzoom: None,
                     minzoom: None,
+                    filter: None,
                     metadata: None,
                     paint: Some(LayerPaint::Fill(FillPaint {
                         fill_opacity: None,
@@ -147,6 +159,7 @@ impl Default for Style {
                     id: "boundary".to_string(),
                     maxzoom: None,
                     minzoom: None,
+                    filter: None,
                     metadata: None,
                     paint: Some(LayerPaint::Line(LinePaint {
                         line_color: Some(Color::from_str("black").unwrap()),
@@ -161,6 +174,7 @@ impl Default for Style {
                     id: "raster".to_string(),
                     maxzoom: None,
                     minzoom: None,
+                    filter: None,
                     metadata: None,
                     paint: Some(LayerPaint::Raster(RasterLayer::default())),
                     source: None,

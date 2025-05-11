@@ -64,17 +64,19 @@ impl<E: Environment, T: VectorTransferables> System for PopulateWorldSystem<E, T
                 /*if message.is_empty() {
                     continue;
                 }*/
-
+                
                 let Some(component) = world
                     .tiles
                     .query_mut::<&mut VectorLayersDataComponent>(message.coords())
                 else {
                     continue;
                 };
+                
+                let layer = message.to_layer();
 
                 component
                     .layers
-                    .push(VectorLayerData::Available(message.to_layer()));
+                    .push(VectorLayerData::Available(layer));
             } else if message.has_tag(T::LayerIndexed::message_tag()) {
                 let message = message.into_transferable::<T::LayerIndexed>();
                 world

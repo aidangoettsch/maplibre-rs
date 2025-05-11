@@ -10,7 +10,8 @@ use crate::{
     coords::WorldTileCoords,
     io::{
         apc::{Context, SendError},
-        geometry_index::{IndexProcessor, IndexedGeometry, TileIndex},
+        // geometry_index::{IndexProcessor, IndexedGeometry, TileIndex},
+        geometry_index::{IndexedGeometry, TileIndex},
     },
     render::ShaderVertex,
     tessellation::{zero_tessellator::ZeroTessellator, IndexDataType, OverAlignedVertexBuffer},
@@ -18,6 +19,8 @@ use crate::{
         LayerIndexed, LayerMissing, LayerTessellated, TileTessellated, VectorTransferables,
     },
 };
+use crate::style::layer::StyleLayer;
+use crate::style::Style;
 
 #[derive(Error, Debug)]
 pub enum ProcessVectorError {
@@ -33,6 +36,7 @@ pub enum ProcessVectorError {
 pub struct VectorTileRequest {
     pub coords: WorldTileCoords,
     pub layers: HashSet<String>,
+    pub style: Style,
 }
 
 pub fn process_vector_tile<T: VectorTransferables, C: Context>(
@@ -50,51 +54,67 @@ pub fn process_vector_tile<T: VectorTransferables, C: Context>(
     let coords = &tile_request.coords;
 
     for layer in &mut tile.layers {
-        let cloned_layer = layer.clone();
-        let layer_name: &str = &cloned_layer.name;
+        let layer_name: &str = &layer.name;
         if !tile_request.layers.contains(layer_name) {
             continue;
         }
+        
+        let corresponding_style_layers: Vec<&StyleLayer> = tile_request.style.layers
+            .iter()
+            .filter(|style_layer| style_layer.source_layer
+                .as_ref()
+                .is_some_and(|source| source.as_str() == layer_name)
+            )
+            .collect();
+        
+        for style_layer in corresponding_style_layers {
+            let mut layer = layer.clone();
+            log::info!("Processing layer {} with filter {:?}", style_layer.id, &style_layer.filter);
+            let mut tessellator = ZeroTessellator::<IndexDataType>::new(style_layer.filter.clone());
+            if let Err(e) = layer.process(&mut tessellator) {
+                context.layer_missing(coords, style_layer.id.as_str())?;
 
-        let mut tessellator = ZeroTessellator::<IndexDataType>::default();
-        if let Err(e) = layer.process(&mut tessellator) {
-            context.layer_missing(coords, layer_name)?;
+                log::error!("layer {} at {coords} tesselation failed {e:?}", style_layer.id.as_str());
+            } else {
+                if let Err(e) = context.layer_tesselation_finished(
+                    coords,
+                    tessellator.buffer.into(),
+                    tessellator.feature_indices,
+                    layer,
+                    style_layer.id.clone()
+                ) {
+                    context.layer_missing(coords, style_layer.id.as_str())?;
 
-            tracing::error!("layer {layer_name} at {coords} tesselation failed {e:?}");
-        } else {
-            context.layer_tesselation_finished(
-                coords,
-                tessellator.buffer.into(),
-                tessellator.feature_indices,
-                cloned_layer,
-            )?;
+                    log::error!("layer {} at {coords} failed to send tesselation finished {e:?}", style_layer.id.as_str());
+                }
+            }
         }
     }
 
     // Missing
 
     let coords = &tile_request.coords;
-
+    
     let available_layers: HashSet<_> = tile
         .layers
         .iter()
         .map(|layer| layer.name.clone())
         .collect::<HashSet<_>>();
-
+    
     for missing_layer in tile_request.layers.difference(&available_layers) {
         context.layer_missing(coords, missing_layer)?;
-        tracing::info!("requested layer {missing_layer} at {coords} not found in tile");
+        log::error!("requested layer {missing_layer} at {coords} not found in tile");
     }
 
     // Indexing
 
-    let mut index = IndexProcessor::new();
-
-    for layer in &mut tile.layers {
-        layer.process(&mut index).unwrap();
-    }
-
-    context.layer_indexing_finished(&tile_request.coords, index.get_geometries())?;
+    // let mut index = IndexProcessor::new();
+    // 
+    // for layer in &mut tile.layers {
+    //     layer.process(&mut index).unwrap();
+    // }
+    // 
+    // context.layer_indexing_finished(&tile_request.coords, index.get_geometries())?;
 
     // End
 
@@ -145,6 +165,7 @@ impl<T: VectorTransferables, C: Context> ProcessVectorContext<T, C> {
         buffer: OverAlignedVertexBuffer<ShaderVertex, IndexDataType>,
         feature_indices: Vec<u32>,
         layer_data: tile::Layer,
+        style_layer_id: String
     ) -> Result<(), ProcessVectorError> {
         self.context
             .send_back(T::LayerTessellated::build_from(
@@ -152,6 +173,7 @@ impl<T: VectorTransferables, C: Context> ProcessVectorContext<T, C> {
                 buffer,
                 feature_indices,
                 layer_data,
+                style_layer_id,
             ))
             .map_err(|e| ProcessVectorError::SendError(e))
     }
@@ -190,6 +212,7 @@ mod tests {
             VectorTileRequest {
                 coords: (0, 0, ZoomLevel::default()).into(),
                 layers: Default::default(),
+                style: Default::default()
             },
             &mut ProcessVectorContext::<DefaultVectorTransferables, _>::new(DummyContext),
         );

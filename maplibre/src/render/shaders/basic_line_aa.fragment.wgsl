@@ -9,15 +9,16 @@ fn main(
     @location(2) line_width: f32,
     @builtin(position) position: vec4<f32>,
 ) -> Output {
-    let mag = length(v_normal);
-    if mag == 0 {
-        return Output(v_color);
-    }
+//    let mag = length(v_normal);
+//    if mag == 0 {
+    return Output(v_color);
+//    }
 
     // Apply line antialiasing
-    let feather = clamp(0.5 + (line_width - 10.0) / 10.0, 0.0, 0.95);
+//    let feather = clamp(0.5 + (line_width - 10.0) / 10.0, 0.0, 0.95);
 
-    let blur: f32 = clamp((1 - mag) + feather, 0.0, 1.0);
-
-    return Output(v_color * blur);
+//    let blur: f32 = clamp((1 - mag) + feather, 0.0, 1.0);
+//    let blur: f32 = 1.0;
+//
+//    return Output(v_color * blur);
 }

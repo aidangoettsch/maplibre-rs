@@ -1,8 +1,8 @@
 //! Tessellator implementation.
 
 use std::cell::RefCell;
-
-use geozero::{FeatureProcessor, GeomProcessor, PropertyProcessor};
+use std::collections::HashMap;
+use geozero::{ColumnValue, FeatureProcessor, GeomProcessor, PropertyProcessor};
 use lyon::{
     geom,
     lyon_tessellation::VertexBuffers,
@@ -17,6 +17,7 @@ use crate::{
     render::ShaderVertex,
     tessellation::{VertexConstructor, DEFAULT_TOLERANCE},
 };
+use crate::style::expression::{ComparisonLiteral, LegacyFilterExpression};
 
 type GeoResult<T> = geozero::error::Result<T>;
 
@@ -30,6 +31,10 @@ pub struct ZeroTessellator<I: std::ops::Add + From<lyon::tessellation::VertexId>
 
     pub feature_indices: Vec<u32>,
     current_index: usize,
+    
+    filter: Option<LegacyFilterExpression>,
+    properties: HashMap<String, ComparisonLiteral>,
+    filtered: bool,
 }
 
 impl<I: std::ops::Add + From<lyon::tessellation::VertexId> + MaxIndex> Default
@@ -43,11 +48,32 @@ impl<I: std::ops::Add + From<lyon::tessellation::VertexId> + MaxIndex> Default
             current_index: 0,
             path_open: false,
             is_point: false,
+            filter: None,
+            properties: Default::default(),
+            filtered: false,
         }
     }
 }
 
 impl<I: std::ops::Add + From<lyon::tessellation::VertexId> + MaxIndex> ZeroTessellator<I> {
+    pub fn new(filter: Option<LegacyFilterExpression>) -> Self {
+        Self {
+            path_builder: RefCell::new(Path::builder()),
+            buffer: VertexBuffers::new(),
+            feature_indices: Vec::new(),
+            current_index: 0,
+            path_open: false,
+            is_point: false,
+            filter,
+            properties: Default::default(),
+            filtered: false,
+        }
+    }
+    
+    fn cur_feature_matches_filter(&self) -> bool {
+        self.filter.as_ref().is_none_or(|filter| filter.evaluate(&self.properties))
+    }
+    
     fn update_feature_indices(&mut self) {
         let next_index = self.buffer.indices.len();
         let indices = (next_index - self.current_index) as u32;
@@ -57,6 +83,14 @@ impl<I: std::ops::Add + From<lyon::tessellation::VertexId> + MaxIndex> ZeroTesse
 
     fn tessellate_strokes(&mut self) {
         let path_builder = self.path_builder.replace(Path::builder());
+
+        self.properties.insert("$type".to_string(), ComparisonLiteral::String("LineString".to_string()));
+        if !self.cur_feature_matches_filter() {
+            self.filtered = true;
+            return
+        }
+        
+        log::info!("UNFILTERED LINE FILTER WAS {:?}\nTHIS LINE HAS PROPS {:?}", self.filter, self.properties);
 
         StrokeTessellator::new()
             .tessellate_path(
@@ -76,6 +110,13 @@ impl<I: std::ops::Add + From<lyon::tessellation::VertexId> + MaxIndex> ZeroTesse
 
     fn tessellate_fill(&mut self) {
         let path_builder = self.path_builder.replace(Path::builder());
+        
+        self.properties.insert("$type".to_string(), ComparisonLiteral::String("Polygon".to_string()));
+        if !self.cur_feature_matches_filter() {
+            self.filtered = true;
+            return
+        }
+        log::info!("UNFILTERED FILL FILTER WAS {:?}\nTHIS FILL HAS PROPS {:?}", self.filter, self.properties);
 
         FillTessellator::new()
             .tessellate_path(
@@ -188,13 +229,25 @@ impl<I: std::ops::Add + From<lyon::tessellation::VertexId> + MaxIndex> GeomProce
 impl<I: std::ops::Add + From<lyon::tessellation::VertexId> + MaxIndex> PropertyProcessor
     for ZeroTessellator<I>
 {
+    fn property(&mut self, _idx: usize, name: &str, value: &ColumnValue) -> geozero::error::Result<bool> {
+        self.properties.insert(name.to_string(), value.into());
+        Ok(true)
+    }
 }
 
 impl<I: std::ops::Add + From<lyon::tessellation::VertexId> + MaxIndex> FeatureProcessor
     for ZeroTessellator<I>
 {
+    fn feature_begin(&mut self, _idx: u64) -> geozero::error::Result<()> {
+        self.properties.clear();
+        self.filtered = false;
+        Ok(())
+    }
+    
     fn feature_end(&mut self, _idx: u64) -> geozero::error::Result<()> {
-        self.update_feature_indices();
+        if !self.filtered {
+            self.update_feature_indices();
+        }
         Ok(())
     }
 }

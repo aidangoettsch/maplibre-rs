@@ -5,6 +5,7 @@ use cint::{Alpha, EncodedSrgb};
 use csscolorparser::Color;
 use serde::{Deserialize, Serialize};
 use crate::coords::ZoomLevel;
+use crate::style::expression::LegacyFilterExpression;
 use crate::style::raster::RasterLayer;
 use crate::style::util::interpolate;
 
@@ -14,7 +15,7 @@ pub enum InterpolatedQuantity<T> {
     Fixed(T),
     Interpolated {
         base: T,
-        stops: Vec<(ZoomLevel, T)>
+        stops: Vec<(f64, T)>
     }
 }
 
@@ -116,6 +117,8 @@ pub struct StyleLayer {
     pub source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename="source-layer")]
     pub source_layer: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filter: Option<LegacyFilterExpression>,
 }
 
 impl Default for StyleLayer {
@@ -125,6 +128,7 @@ impl Default for StyleLayer {
             id: "id".to_string(),
             maxzoom: None,
             minzoom: None,
+            filter: None,
             metadata: None,
             paint: None,
             source: None,

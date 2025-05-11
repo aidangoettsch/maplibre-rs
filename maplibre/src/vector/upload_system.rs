@@ -133,7 +133,7 @@ fn upload_tesselated_layer(
     // Upload all tessellated layers which are in view
     for coords in view_region.iter() {
         for style_layer in &style.layers {
-            let layer_data = tiles.find_layer(coords, &style_layer.source_layer, buffer_pool);
+            let layer_data = tiles.find_layer(coords, &style_layer.source_layer, &style_layer.id, buffer_pool);
 
             let Some(AvailableVectorLayerData {
                          buffer,
@@ -149,6 +149,8 @@ fn upload_tesselated_layer(
                 .and_then(|paint| paint.get_color(coords.z))
                 .map(|color| color.into());
 
+            let color = color.expect(&format!("Layer {} with source {:?} had None color", style_layer.id, style_layer.source_layer));
+
             let width = style_layer
                 .paint
                 .as_ref()
@@ -163,14 +165,19 @@ fn upload_tesselated_layer(
                 .iter()
                 .flat_map(|i| {
                     iter::repeat(ShaderFeatureStyle {
-                        color: color.unwrap(),
+                        color,
                         width,
                     })
                     .take(*i as usize)
                 })
                 .collect::<Vec<_>>();
 
-            log::info!("Allocating geometry at {coords} for layer {} with width {width}", style_layer.id);
+            log::info!("Allocating geometry at {coords} for layer {} with width {width} color {color:?} z-index {}, has {} features", style_layer.id, style_layer.index, feature_metadata.len());
+            
+            if feature_metadata.is_empty() {
+                continue;
+            }
+            
             buffer_pool.allocate_layer_geometry(
                 queue,
                 coords,

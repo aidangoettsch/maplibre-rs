@@ -187,6 +187,8 @@ impl LayerTessellated for FlatBufferTransferable {
         buffer: OverAlignedVertexBuffer<ShaderVertex, IndexDataType>,
         feature_indices: Vec<u32>,
         layer_data: Layer,
+        // TODO(aidangoettsch): need to incorporate this in the web flatbuffer defs
+        style_layer_id: String,
     ) -> Self {
         let mut inner_builder = FlatBufferBuilder::with_capacity(1024);
 

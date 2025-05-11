@@ -59,6 +59,7 @@ pub trait LayerTessellated: IntoMessage + Debug + Send {
         buffer: OverAlignedVertexBuffer<ShaderVertex, IndexDataType>,
         feature_indices: Vec<u32>,
         layer_data: Layer,
+        style_layer_id: String
     ) -> Self
     where
         Self: Sized;
@@ -149,7 +150,7 @@ impl LayerMissing for DefaultLayerMissing {
     fn to_layer(self) -> MissingVectorLayerData {
         MissingVectorLayerData {
             coords: self.coords,
-            source_layer: self.layer_name,
+            style_layer_id: self.layer_name,
         }
     }
 }
@@ -161,6 +162,7 @@ pub struct DefaultLayerTesselated {
     /// Holds for each feature the count of indices.
     pub feature_indices: Vec<u32>,
     pub layer_data: Layer, // FIXME (perf): Introduce a better structure for this
+    pub style_layer_id: String
 }
 
 impl Debug for DefaultLayerTesselated {
@@ -185,12 +187,14 @@ impl LayerTessellated for DefaultLayerTesselated {
         buffer: OverAlignedVertexBuffer<ShaderVertex, IndexDataType>,
         feature_indices: Vec<u32>,
         layer_data: Layer,
+        style_layer_id: String
     ) -> Self {
         Self {
             coords,
             buffer,
             feature_indices,
             layer_data,
+            style_layer_id
         }
     }
 
@@ -205,9 +209,9 @@ impl LayerTessellated for DefaultLayerTesselated {
     fn to_layer(self) -> AvailableVectorLayerData {
         AvailableVectorLayerData {
             coords: self.coords,
-            source_layer: self.layer_data.name,
             buffer: self.buffer,
             feature_indices: self.feature_indices,
+            style_layer_id: self.style_layer_id,
         }
     }
 }

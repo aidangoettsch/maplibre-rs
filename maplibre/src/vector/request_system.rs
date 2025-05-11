@@ -142,6 +142,7 @@ pub fn fetch_vector_apc<K: OffscreenKernel, T: VectorTransferables, C: Context +
                         VectorTileRequest {
                             coords,
                             layers: fill_layers,
+                            style
                         },
                         &mut pipeline_context,
                     )
